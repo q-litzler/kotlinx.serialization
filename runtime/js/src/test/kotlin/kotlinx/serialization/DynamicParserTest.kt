@@ -63,12 +63,12 @@ class DynamicParserTest {
     data class NotDefault(val a: Int)
 
     object NDSerializer : KSerializer<NotDefault> {
-        override fun serialize(output: Encoder, obj: NotDefault) {
-            output.encodeInt(obj.a)
+        override fun serialize(encoder: Encoder, obj: NotDefault) {
+            encoder.encodeInt(obj.a)
         }
 
-        override fun deserialize(input: Decoder): NotDefault {
-            return NotDefault(input.decodeInt())
+        override fun deserialize(decoder: Decoder): NotDefault {
+            return NotDefault(decoder.decodeInt())
         }
 
         override val descriptor = SerialClassDescImpl("notDefault")
@@ -164,8 +164,8 @@ class DynamicParserTest {
 
     @Test
     fun parseWithCustomSerializers() {
-        val loader = DynamicObjectParser().apply { install(SimpleModule(NotDefault::class, NDSerializer)) }
+        val deserializer = DynamicObjectParser().apply { install(SimpleModule(NotDefault::class, NDSerializer)) }
         val dyn1 = js("({data: 42})")
-        assertEquals(NDWrapper(NotDefault(42)), loader.parse(dyn1))
+        assertEquals(NDWrapper(NotDefault(42)), deserializer.parse(dyn1))
     }
 }

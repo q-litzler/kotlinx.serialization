@@ -132,14 +132,14 @@ abstract class TaggedEncoder<Tag : Any?> : Encoder, CompositeEncoder {
     final override fun encodeCharElement(desc: SerialDescriptor, index: Int, value: Char) = encodeTaggedChar(desc.getTag(index), value)
     final override fun encodeStringElement(desc: SerialDescriptor, index: Int, value: String) = encodeTaggedString(desc.getTag(index), value)
 
-    final override fun <T : Any?> encodeSerializableElement(desc: SerialDescriptor, index: Int, saver: SerializationStrategy<T>, value: T) {
+    final override fun <T : Any?> encodeSerializableElement(desc: SerialDescriptor, index: Int, serializer: SerializationStrategy<T>, value: T) {
         if (encodeElement(desc, index))
-            encodeSerializableValue(saver, value)
+            encodeSerializableValue(serializer, value)
     }
 
-    final override fun <T : Any> encodeNullableSerializableElement(desc: SerialDescriptor, index: Int, saver: SerializationStrategy<T>, value: T?) {
+    final override fun <T : Any> encodeNullableSerializableElement(desc: SerialDescriptor, index: Int, serializer: SerializationStrategy<T>, value: T?) {
         if (encodeElement(desc, index))
-            encodeNullableSerializableValue(saver, value)
+            encodeNullableSerializableValue(serializer, value)
     }
 
     private val tagStack = arrayListOf<Tag>()
@@ -163,10 +163,6 @@ abstract class IntTaggedEncoder : TaggedEncoder<Int?>() {
     final override fun SerialDescriptor.getTag(index: Int): Int? = getSerialId(this, index)
 }
 
-abstract class StringTaggedEncoder : TaggedEncoder<String?>() {
-    final override fun SerialDescriptor.getTag(index: Int): String? = getSerialTag(this, index)
-}
-
 abstract class NamedValueEncoder(val rootName: String = "") : TaggedEncoder<String>() {
     final override fun SerialDescriptor.getTag(index: Int): String = nested(elementName(this, index))
 
@@ -175,10 +171,11 @@ abstract class NamedValueEncoder(val rootName: String = "") : TaggedEncoder<Stri
     open fun composeName(parentName: String, childName: String) = if (parentName.isEmpty()) childName else parentName + "." + childName
 }
 
-// Helpers for native
+fun getSerialId(desc: SerialDescriptor, index: Int): Int?
+        = desc.getElementAnnotations(index).filterIsInstance<SerialId>().singleOrNull()?.id
 
-expect fun getSerialId(desc: SerialDescriptor, index: Int): Int?
-expect fun getSerialTag(desc: SerialDescriptor, index: Int): String?
+fun getSerialTag(desc: SerialDescriptor, index: Int): String?
+        = desc.getElementAnnotations(index).filterIsInstance<SerialTag>().singleOrNull()?.tag
 
 abstract class TaggedDecoder<Tag : Any?> : Decoder, CompositeDecoder {
     override var context: SerialContext = EmptyContext
@@ -253,17 +250,17 @@ abstract class TaggedDecoder<Tag : Any?> : Decoder, CompositeDecoder {
     final override fun decodeCharElement(desc: SerialDescriptor, index: Int): Char = decodeTaggedChar(desc.getTag(index))
     final override fun decodeStringElement(desc: SerialDescriptor, index: Int): String = decodeTaggedString(desc.getTag(index))
 
-    final override fun <T : Any?> decodeSerializableElement(desc: SerialDescriptor, index: Int, loader: DeserializationStrategy<T>): T =
-        tagBlock(desc.getTag(index)) { decodeSerializableValue(loader) }
+    final override fun <T : Any?> decodeSerializableElement(desc: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T>): T =
+        tagBlock(desc.getTag(index)) { decodeSerializableValue(deserializer) }
 
-    final override fun <T : Any> decodeNullableSerializableElement(desc: SerialDescriptor, index: Int, loader: DeserializationStrategy<T?>): T? =
-        tagBlock(desc.getTag(index)) { decodeNullableSerializableValue(loader) }
+    final override fun <T : Any> decodeNullableSerializableElement(desc: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T?>): T? =
+        tagBlock(desc.getTag(index)) { decodeNullableSerializableValue(deserializer) }
 
-    override fun <T> updateSerializableElement(desc: SerialDescriptor, index: Int, loader: DeserializationStrategy<T>, old: T): T =
-        tagBlock(desc.getTag(index)) { updateSerializableValue(loader, old) }
+    override fun <T> updateSerializableElement(desc: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T>, old: T): T =
+        tagBlock(desc.getTag(index)) { updateSerializableValue(deserializer, old) }
 
-    override fun <T : Any> updateNullableSerializableElement(desc: SerialDescriptor, index: Int, loader: DeserializationStrategy<T?>, old: T?): T? =
-        tagBlock(desc.getTag(index)) { updateNullableSerializableValue(loader, old) }
+    override fun <T : Any> updateNullableSerializableElement(desc: SerialDescriptor, index: Int, deserializer: DeserializationStrategy<T?>, old: T?): T? =
+        tagBlock(desc.getTag(index)) { updateNullableSerializableValue(deserializer, old) }
 
     private fun <E> tagBlock(tag: Tag, block: () -> E): E {
         pushTag(tag)
@@ -281,7 +278,7 @@ abstract class TaggedDecoder<Tag : Any?> : Decoder, CompositeDecoder {
     protected val currentTagOrNull
         get() = tagStack.lastOrNull()
 
-    private fun pushTag(name: Tag) {
+    protected fun pushTag(name: Tag) {
         tagStack.add(name)
     }
 

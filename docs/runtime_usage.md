@@ -46,21 +46,21 @@ Runtime library provides three ready-to use formats: JSON, CBOR and ProtoBuf.
 
 ### JSON
 
-JSON format represented by `JSON` class from `kotlinx.serialization.json` package. It has following parameters:
+JSON format represented by `Json` class from `kotlinx.serialization.json` package. It has following parameters:
 
 * strict - Prohibits unknown keys when parsing JSON. Prohibits NaN and Infinity float values when serializing JSON. Enabled by default.
 * unquoted - means that all field names and other objects (where it's possible) would not be wrapped in quotes. Useful for debugging.
 * indented - classic pretty-printed multiline JSON.
 * indent - size of indent, applicable if parameter above is true.
 
-You can also use one of predefined instances, like `JSON.plain`, `JSON.indented`, `JSON.nonstrict` or `JSON.unquoted`. API is duplicated in companion object, so `JSON.parse(...)` equals to `JSON.plain.parse(...)`
+You can also use one of predefined instances, like `Json.plain`, `Json.indented`, `Json.nonstrict` or `Json.unquoted`. API is duplicated in companion object, so `Json.parse(...)` equals to `Json.plain.parse(...)`
 
 You can also specify desired behaviour for duplicating keys. By default it is `UpdateMode.OVERWRITE`. You can use `UpdateMode.UPDATE`, and by doing that you'll be able to merge two lists or maps with same key into one; but be aware that serializers for non-collection types are throwing `UpdateNotSupportedException` by default. To prohibit duplicated keys, you can use `UpdateMode.BANNED`.
 
 JSON API:
 
 ```kotlin
-fun <T> stringify(saver: SerializationStrategy<T>, obj: T): String
+fun <T> stringify(serializer: SerializationStrategy<T>, obj: T): String
 inline fun <reified T : Any> stringify(obj: T): String = stringify(T::class.serializer(), obj)
 
 fun <T> parse(loader: DeserializationStrategy<T>, str: String): T
@@ -80,7 +80,7 @@ so it wouldn't work with root-level collections or external serializers out of t
 `CBOR` class provides following functions:
 
 ```kotlin
-fun <T : Any> dump(saver: SerializationStrategy<T>, obj: T): ByteArray // saves object to bytes
+fun <T : Any> dump(serializer: SerializationStrategy<T>, obj: T): ByteArray // saves object to bytes
 inline fun <reified T : Any> dump(obj: T): ByteArray // same as above, resolves serializer by itself
 inline fun <reified T : Any> dumps(obj: T): String // dump object and then pretty-print bytes to string
 

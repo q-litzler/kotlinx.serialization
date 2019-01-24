@@ -1,6 +1,6 @@
 import kotlinx.serialization.*
 import kotlinx.serialization.context.*
-import kotlinx.serialization.json.JSON
+import kotlinx.serialization.json.Json
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -25,7 +25,7 @@ import java.util.*
 data class Data(
         val id: Int,
         @Serializable(with = IX::class) val payload: Payload,
-        val date: Date
+        @ContextualSerialization val date: Date
 )
 
 data class Payload(val content: String)
@@ -41,13 +41,13 @@ object DateSerializer : KSerializer<Date> {
         output.encodeString(df.format(obj))
     }
 
-    override fun deserialize(input: Decoder): Date {
-        return df.parse(input.decodeString())
+    override fun deserialize(decoder: Decoder): Date {
+        return df.parse(decoder.decodeString())
     }
 }
 
 fun main(args: Array<String>) {
     val o = Data(1, Payload("lorem ipsum dolor sit amet"), Date())
-    val json = JSON(indented = true).apply { install(SimpleModule(Date::class, DateSerializer)) }
+    val json = Json(indented = true).apply { install(SimpleModule(Date::class, DateSerializer)) }
     println(json.stringify(Data.serializer(), o))
 }

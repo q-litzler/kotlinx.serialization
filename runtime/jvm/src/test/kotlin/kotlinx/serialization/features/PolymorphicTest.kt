@@ -17,13 +17,12 @@
 package kotlinx.serialization.features
 
 import kotlinx.serialization.*
-import kotlinx.serialization.json.JSON
-import kotlinx.serialization.protobuf.ProtoBuf
+import kotlinx.serialization.json.*
+import kotlinx.serialization.protobuf.*
 import org.junit.Test
-import java.text.DateFormat
-import java.text.SimpleDateFormat
+import java.text.*
 import java.util.*
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 @Serializable
 open class A(@SerialId(1) val id: Int) {
@@ -64,19 +63,19 @@ class PolymorphicTest {
     object DateSerializer {
         private val df: DateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS")
 
-        override fun serialize(output: Encoder, obj: Date) {
-            output.encodeString(df.format(obj))
+        override fun serialize(encoder: Encoder, obj: Date) {
+            encoder.encodeString(df.format(obj))
         }
 
-        override fun deserialize(input: Decoder): Date {
-            return df.parse(input.decodeString())
+        override fun deserialize(decoder: Decoder): Date {
+            return df.parse(decoder.decodeString())
         }
     }
 
     @Test
-    fun testInheritanceJSON() {
+    fun testInheritanceJson() {
         val obj = Wrapper(A(2), B("b"))
-        val bytes = JSON.unquoted.stringify(obj)
+        val bytes = Json.unquoted.stringify(obj)
         assertEquals("{a1:[kotlinx.serialization.features.A,{id:2}]," +
                 "a2:[kotlinx.serialization.features.B,{id:1,s:b}]}", bytes)
     }
@@ -101,7 +100,7 @@ class PolymorphicTest {
     @Test
     fun testExplicit() {
         val obj = B("b")
-        val s = JSON.unquoted.stringify(PolymorphicSerializer, obj)
+        val s = Json.unquoted.stringify(PolymorphicSerializer, obj)
         assertEquals("[kotlinx.serialization.features.B,{id:1,s:b}]", s)
     }
 }

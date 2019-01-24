@@ -39,14 +39,14 @@ interface SerialDescriptor {
 }
 
 interface SerializationStrategy<in T> {
-    fun serialize(output: Encoder, obj : T)
+    fun serialize(encoder: Encoder, obj : T)
 
     val descriptor: SerialDescriptor
 }
 
 interface DeserializationStrategy<T> {
-    fun deserialize(input: Decoder): T
-    fun patch(input: Decoder, old: T): T
+    fun deserialize(decoder: Decoder): T
+    fun patch(decoder: Decoder, old: T): T
 
     val descriptor: SerialDescriptor
 }
@@ -58,11 +58,12 @@ enum class UpdateMode {
 interface KSerializer<T>: SerializationStrategy<T>, DeserializationStrategy<T> {
     override val descriptor: SerialDescriptor
 
-    override fun patch(input: Decoder, old: T): T = throw UpdateNotSupportedException(descriptor.name)
+    override fun patch(decoder: Decoder, old: T): T = throw UpdateNotSupportedException(descriptor.name)
 }
 
 
-class SerializationConstructorMarker private constructor()
+@Suppress("UNUSED")
+internal class SerializationConstructorMarker private constructor()
 
 
 @ImplicitReflectionSerializer
@@ -81,5 +82,5 @@ fun <T : Any> Encoder.encodeNullable(strategy: SerializationStrategy<T>, obj: T?
 @ImplicitReflectionSerializer
 inline fun <reified T: Any> Decoder.decode(): T = this.decode(T::class.serializer())
 
-fun <T : Any?> Decoder.decode(loader: DeserializationStrategy<T>): T = loader.deserialize(this)
-fun <T : Any> Decoder.decodeNullable(loader: DeserializationStrategy<T>): T? = if (decodeNotNullMark()) decode(loader) else decodeNull()
+fun <T : Any?> Decoder.decode(deserializer: DeserializationStrategy<T>): T = deserializer.deserialize(this)
+fun <T : Any> Decoder.decodeNullable(deserializer: DeserializationStrategy<T>): T? = if (decodeNotNullMark()) decode(deserializer) else decodeNull()
