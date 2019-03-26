@@ -1,5 +1,17 @@
 # Runtime library contents and usage
 
+* [Obtaining serializers](#obtaining-serializers)
+  + [Implicit reflection serializers](#implicit-reflection-serializers)
+  + [Special serializers](#special-serializers)
+* [Serialization formats](#serialization-formats)
+  + [JSON](#json)
+  + [CBOR](#cbor)
+  + [Protobuf](#protobuf)
+* [Useful classes](#useful-classes)
+  + [Mapper](#mapper)
+  + [Dynamic object parser (JS only)](#dynamic-object-parser-js-only)
+
+
 ## Obtaining serializers
 
 Serializers are represented at runtime as `KSerializer<T>`, which in turn, implements interfaces `SerializationStrategy<T>` and `DeserializationStrategy<T>`, where `T` is class you serialize.
@@ -32,13 +44,38 @@ val li: KSerializer<List<Data>>       = Data.serializer().list
 val mp: KSerializer<Map<String, Int>> = (StringSerializer to IntSerializer).map // extension on Pair of serializers
 ```
 
+All external serializers (defined by user) are instantiated in a user-specific way. To learn how to write them, see [docs](custom_serializers.md).
+
+### Implicit reflection serializers
+
 In following special case:
 * Class explicitly marked `@Serializable`
-* Class doesn't have generic type arguments
+* Class does not have generic type arguments
 
-You can obtain serializer from KClass instance: `val d: KSerializer<MyData> = MyData::class.serializer()`. This approach is discouraged in general because of its implicitness, but maybe useful shorthand in some cases.
+You can obtain serializer from KClass instance: `val d: KSerializer<MyData> = MyData::class.serializer()`.
+This approach is discouraged in general because it is implicit and uses reflection (and therefore not working on Kotlin/Native),
+but may be useful shorthand in some cases.
 
-All external serializers (defined by user) are instantiated in a user-specific way. To learn how to write them, see [docs](custom_serializers.md).
+Functions which uses this or similar functionality are annotated
+with [experimental](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-experimental/index.html) 
+annotation `kotlinx.serialization.ImplicitReflectionSerializer`.
+Consult [annotation documentation](https://github.com/kotlin/kotlinx.serialization/blob/master/runtime/common/src/main/kotlin/kotlinx/serialization/SerialImplicits.kt#L11) 
+to learn about restrictions of this approach.
+To learn how to use experimental annotations, look at theirs [KEEP](https://github.com/Kotlin/KEEP/blob/master/proposals/experimental.md)
+or use [this guide](https://kotlinlang.org/docs/reference/experimental.html#using-experimental-apis).
+
+### Special serializers
+
+There are two special serializers which are turned on using corresponding annotations: 
+`@Contextual` for `ContextSerializer` and `@Polymorphic` for `PolymorphicSerializer`.
+
+The former allows to switch to the run-time resolving of serializers instead of compile-time.
+This can be useful when you want to use some custom external serializer
+or to define different serializers for different formats.
+The latter allows polymorphic serialization and deserialization using runtime class information
+and recorded name of a class. Consult theirs documentation for details.
+
+Both use serial modules system, which is explained [here](custom_serializers.md#registering-and-context).
 
 ## Serialization formats
 
@@ -52,7 +89,7 @@ JSON format represented by `Json` class from `kotlinx.serialization.json` packag
 * unquoted - means that all field names and other objects (where it's possible) would not be wrapped in quotes. Useful for debugging.
 * indented - classic pretty-printed multiline JSON.
 * indent - size of indent, applicable if parameter above is true.
-* encodeDefaults - set this to false to omit writing @Optional properties if they are equal to theirs default values.
+* encodeDefaults - set this to false to omit writing optional properties if they are equal to theirs default values.
 
 You can also use one of predefined instances, like `Json.plain`, `Json.indented`, `Json.nonstrict` or `Json.unquoted`. API is duplicated in companion object, so `Json.parse(...)` equals to `Json.plain.parse(...)`
 
@@ -121,7 +158,7 @@ Number format is set via `@ProtoType` annotation. `ProtoNumberType.DEFAULT` is d
 is signed ZigZag representation (`sintXX`), and `FIXED` is `fixedXX` type. `uintXX` and `sfixedXX` are not supported yet.
 
 Repeated fields represented as lists. Because format spec says that if the list is empty, there will be no elements in the stream with such tag,
-you must explicitly mark any field of list type with `@Optional` annotation with default ` = emptyList()`. Same for maps. Update mode for Protobuf is set to `UPDATE` and can't be changed, thus allowing merging several scattered lists into one.
+you must explicitly mark any field of list type with default ` = emptyList()`. Same for maps. Update mode for Protobuf is set to `UPDATE` and can't be changed, thus allowing merging several scattered lists into one.
 
 Other known issues and limitations:
 
